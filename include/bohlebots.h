@@ -189,6 +189,7 @@ class BohleBots {
     }
 
     void fahre(int richtung, int geschw, int dreh) {
+        Serial.printf("direction: %d, speed: %d, turn: %d\n", richtung, geschw, dreh);
         if (bot_type == 2) fahre2(richtung, geschw, dreh);
         if (bot_type == 3) fahre3(richtung, geschw, dreh);
         if (bot_type == 4) fahre4(richtung, geschw, dreh);

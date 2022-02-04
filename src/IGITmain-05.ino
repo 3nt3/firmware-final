@@ -21,12 +21,11 @@ void get_motor_ids() {
 void pixy_auswerten()  // wird nur aufgerufen, wenn die Pixy überhaupt etwas sieht
 {
     int my_signature = 1;  // always use the first (=biggest) signature
-    if (g_pixy.ccc.numBlocks > 0) {
-        int sieht_farbe = g_pixy.ccc.blocks[0].m_signature;
+    int sieht_farbe = g_pixy.ccc.blocks[0].m_signature;
 
-        Serial.printf("just before if statement in pixy_auswerten\n");
+    if (g_pixy.ccc.numBlocks > 0) {
         if (sieht_farbe == my_signature) {
-            g_goal_direction = -(g_pixy.ccc.blocks[0].m_x - 158) / 2;
+            g_goal_direction = (g_pixy.ccc.blocks[0].m_x - 158) / 2;
             g_goal_width = g_pixy.ccc.blocks[0].m_width;
             g_goal_distance = pow(g_pixy.ccc.blocks[0].m_y - 80, 6) / 1000000;
 
@@ -36,7 +35,7 @@ void pixy_auswerten()  // wird nur aufgerufen, wenn die Pixy überhaupt etwas si
             // seekspeed=seektop;
         } else  // soll hier überhaupt etwas geschehen?
         {
-            g_goal_direction = g_compass;
+            g_goal_direction = g_compass / 8;
 
             Wire.beginTransmission(0x27);
             Wire.write(255 - 2);
@@ -48,31 +47,29 @@ void pixy_auswerten()  // wird nur aufgerufen, wenn die Pixy überhaupt etwas si
         }
     }
 
-    Serial.printf("pixy_auswerten end\n");
     // pixyzeit=0;
 }
 
-// void pixy_read(int &tor_richtung, int &tor_breite, int &tor_entfernung, int compass,
-//                uint8_t &led_byte) {
-//     int i;
-//     // grab blocks!
-//     g_pixy.ccc.getBlocks();
-//
-//     // If there are detect blocks, print them!
-//     if (sizeof(g_pixy.ccc.blocks) > 0) {
-//         pixy_auswerten();
-//     } else {
-//         tor_richtung = compass;
-//         led_byte += 2;  // ledbyte um 2 erhöhen, wenn keine Pixy-Wert;
-//     }
-// }
+void pixy_read() {
+    int i;
+    // grab blocks!
+    g_pixy.ccc.getBlocks();
+
+    // If there are detect blocks, print them!
+    if (sizeof(g_pixy.ccc.blocks) > 0) {
+        pixy_auswerten();
+    } else {
+        g_goal_direction = -g_compass;
+        // led_byte += 2;  // ledbyte um 2 erhöhen, wenn keine Pixy-Wert;
+    }
+}
 
 void setup() {
     g_bot.set_bot_type(4);  // four wheels
     g_bot.init();
     g_bot.setze_kompass();  // resets the compass to 0
 
-    g_pixy.init();
+    // g_pixy.init();
     pinMode(35, INPUT);
 
     Serial.begin(115200);
@@ -91,13 +88,12 @@ void setup() {
 }
 
 void get_data() {
-    Serial.printf("get_data reached\n");
     g_bot.warte(10);
     int irData = 0;
     int ball_seen = 0;
 
     // light barrier
-    Serial.printf("yzzhdkl: %d\n", analogRead(LIGHT_BARRIER_PIN));
+    // Serial.printf("yzzhdkl: %d\n", analogRead(LIGHT_BARRIER_PIN));
 
     CAN.beginPacket(0x03, 1, true);  // daten abfragen
     CAN.endPacket();
@@ -116,7 +112,6 @@ void get_data() {
     }
     g_compass = g_bot.kompass();
 
-    Serial.printf("just before pixy\n");
     pixy_auswerten();
 }
 
@@ -142,7 +137,7 @@ void action() {
     // stop fahring
     // if ball not seen
     if (g_ball_direction == -8) {
-        g_bot.fahre(0, 0, 0);
+        fahre_corrected(0, 0, 0);
         return;
     }
     // set variable
@@ -156,14 +151,14 @@ void action() {
     // if ball in ballschale
     if (g_ball_direction == 0)
         // fahr in torrichtung
-        g_bot.fahre(0, MAX_SPEED, turn);
+        fahre_corrected(0, MAX_SPEED, turn);
     else {
         // locate ball with IR-Ring
         int dir = ((g_ball_direction + 1) / 2) + (1 * side(g_ball_direction));
         // correct with ERFAHRUNG
         dir = direction_correction(dir);
         // fahr in ball direction
-        g_bot.fahre(dir, MAX_SPEED * SPEED_TRAP, turn);
+        fahre_corrected(dir, MAX_SPEED * SPEED_TRAP, turn);
     }
 }
 
@@ -174,12 +169,16 @@ void debug_SerialOutput() {
     Serial.println("goalDir:   " + String(g_goal_direction));
     Serial.println("goalDist:  " + String(g_goal_distance));
     Serial.println("goalWidth: " + String(g_goal_width));
-    Serial.printf("compass:   %d\n", g_compass);
+    Serial.printf("compass:   %d\n", g_bot.kompass());
     Serial.println("//////////////////////////////////////////////");
     Serial.println();
 }
 
 int cnt = 0;
+
+void fahre_corrected(int direction, int speed, int turn) {
+    g_bot.fahre(direction, speed, turn - (speed * 0.1));
+}
 
 void debugOutput(const int &n) {
     if (n <= 0) return;
@@ -193,5 +192,5 @@ void debugOutput(const int &n) {
 void loop() {
     get_data();
     action();
-    // debugOutput(10);
+    debugOutput(100);
 }
