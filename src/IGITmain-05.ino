@@ -122,7 +122,6 @@ void get_data() {
     g_compass = g_bot.kompass();
 
     pixy_auswerten();
-    Serial.printf("pixy works\n");
 }
 
 // direction_correction tries to adjust for error in the values received.
@@ -153,10 +152,10 @@ void action() {
     // set variable
     int turn = 0;
     // pixy
-    // if (g_sees_goal) turn = g_goal_direction;
+    if (g_sees_goal) turn = g_goal_direction;
     // else kompass
     // else
-    turn = -g_bot.kompass() / 3;
+    // turn = -g_bot.kompass() / 3;
 
     // turn = clamp(-10, 10, turn);
 
@@ -200,6 +199,6 @@ void debugOutput(const int &n) {
 void loop() {
     // Serial.printf("loop\n");
     get_data();
-    action();
+    // action();
     debugOutput(100);
 }
