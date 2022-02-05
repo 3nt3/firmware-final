@@ -18,6 +18,15 @@ void get_motor_ids() {
     }
 }
 
+int clamp(int min, int max, int a) {
+    if (a < min) {
+        return min;
+    } else if (a > max) {
+        return max;
+    } else
+        return a;
+}
+
 void pixy_auswerten()  // wird nur aufgerufen, wenn die Pixy überhaupt etwas sieht
 {
     int my_signature = 1;  // always use the first (=biggest) signature
@@ -113,6 +122,7 @@ void get_data() {
     g_compass = g_bot.kompass();
 
     pixy_auswerten();
+    Serial.printf("pixy works\n");
 }
 
 // direction_correction tries to adjust for error in the values received.
@@ -137,28 +147,30 @@ void action() {
     // stop fahring
     // if ball not seen
     if (g_ball_direction == -8) {
-        fahre_corrected(0, 0, 0);
+        g_bot.fahre(0, 0, 0);
         return;
     }
     // set variable
     int turn = 0;
     // pixy
-    if (g_sees_goal) turn = g_goal_direction;
+    // if (g_sees_goal) turn = g_goal_direction;
     // else kompass
-    else
-        turn = -g_bot.kompass() / 6;
+    // else
+    turn = -g_bot.kompass() / 3;
+
+    // turn = clamp(-10, 10, turn);
 
     // if ball in ballschale
     if (g_ball_direction == 0)
         // fahr in torrichtung
-        fahre_corrected(0, MAX_SPEED, turn);
+        g_bot.fahre(0, MAX_SPEED, turn);
     else {
         // locate ball with IR-Ring
         int dir = ((g_ball_direction + 1) / 2) + (1 * side(g_ball_direction));
         // correct with ERFAHRUNG
         dir = direction_correction(dir);
         // fahr in ball direction
-        fahre_corrected(dir, MAX_SPEED * SPEED_TRAP, turn);
+        g_bot.fahre(dir, MAX_SPEED * SPEED_TRAP, turn);
     }
 }
 
@@ -176,10 +188,6 @@ void debug_SerialOutput() {
 
 int cnt = 0;
 
-void fahre_corrected(int direction, int speed, int turn) {
-    g_bot.fahre(direction, speed, turn - (speed * 0.1));
-}
-
 void debugOutput(const int &n) {
     if (n <= 0) return;
     ++cnt;
@@ -190,6 +198,7 @@ void debugOutput(const int &n) {
 }
 
 void loop() {
+    // Serial.printf("loop\n");
     get_data();
     action();
     debugOutput(100);
